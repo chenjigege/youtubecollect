@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回复评论调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .raw-data {
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .comment-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        .reply-item {
+            margin: 5px 0 5px 20px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube 回复评论调试页面</h1>
+        
+        <div class="form-group">
+            <label for="apiKey">YouTube API Key:</label>
+            <input type="text" id="apiKey" placeholder="请输入您的YouTube API Key">
+        </div>
+        
+        <div class="form-group">
+            <label for="videoId">视频ID:</label>
+            <input type="text" id="videoId" placeholder="例如: dQw4w9WgXcQ">
+        </div>
+        
+        <button onclick="debugCommentThreads()">调试评论线程</button>
+        <button onclick="debugReplies()">调试回复评论</button>
+        <button onclick="clearResults()">清除结果</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function debugCommentThreads() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const videoId = document.getElementById('videoId').value.trim();
+            
+            if (!apiKey || !videoId) {
+                showMessage('请输入API Key和视频ID', 'error');
+                return;
+            }
+
+            showMessage('开始获取评论线程...', 'success');
+            
+            // 获取评论线程（包含回复信息）
+            const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet,replies&videoId=${videoId}&maxResults=20&key=${apiKey}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('评论线程原始数据:', data);
+                    displayCommentThreads(data);
+                })
+                .catch(error => {
+                    showMessage('获取评论线程失败: ' + error.message, 'error');
+                });
+        }
+
+        function debugReplies() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const videoId = document.getElementById('videoId').value.trim();
+            
+            if (!apiKey || !videoId) {
+                showMessage('请输入API Key和视频ID', 'error');
+                return;
+            }
+
+            showMessage('开始获取回复评论...', 'success');
+            
+            // 先获取评论线程
+            const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet,replies&videoId=${videoId}&maxResults=20&key=${apiKey}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // 收集所有回复评论ID
+                    const replyIds = [];
+                    data.items.forEach(item => {
+                        if (item.replies && item.replies.comments) {
+                            item.replies.comments.forEach(reply => {
+                                replyIds.push(reply.id);
+                            });
+                        }
+                    });
+
+                    if (replyIds.length === 0) {
+                        showMessage('没有找到回复评论', 'info');
+                        return;
+                    }
+
+                    // 获取回复评论的详细信息
+                    const replyUrl = `https://www.googleapis.com/youtube/v3/comments?part=snippet&id=${replyIds.join(',')}&key=${apiKey}`;
+                    console.log('回复评论URL:', replyUrl);
+                    
+                    return fetch(replyUrl);
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('回复评论详细信息:', data);
+                    displayReplies(data);
+                })
+                .catch(error => {
+                    showMessage('获取回复评论失败: ' + error.message, 'error');
+                });
+        }
+
+        function displayCommentThreads(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `<div class="results">
+                <h3>评论线程数据 (共 ${data.items?.length || 0} 条)</h3>
+                <div class="raw-data">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            if (data.items) {
+                data.items.forEach((item, index) => {
+                    const topComment = item.snippet.topLevelComment.snippet;
+                    const hasReplies = item.replies && item.replies.comments;
+                    const replyCount = hasReplies ? item.replies.comments.length : 0;
+                    
+                    html += `
+                        <div class="comment-item">
+                            <h4>主评论 ${index + 1}</h4>
+                            <p><strong>ID:</strong> ${item.id}</p>
+                            <p><strong>作者:</strong> ${topComment.authorDisplayName}</p>
+                            <p><strong>内容:</strong> ${topComment.textDisplay}</p>
+                            <p><strong>有回复:</strong> ${hasReplies ? '是' : '否'}</p>
+                            <p><strong>回复数量:</strong> ${replyCount}</p>
+                            
+                            ${hasReplies ? `
+                                <h5>回复评论:</h5>
+                                ${item.replies.comments.map((reply, replyIndex) => `
+                                    <div class="reply-item">
+                                        <p><strong>回复 ${replyIndex + 1} ID:</strong> ${reply.id}</p>
+                                        <p><strong>回复内容:</strong> ${reply.snippet?.textDisplay || '无内容'}</p>
+                                        <p><strong>回复作者:</strong> ${reply.snippet?.authorDisplayName || '未知'}</p>
+                                    </div>
+                                `).join('')}
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayReplies(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `<div class="results">
+                <h3>回复评论详细信息 (共 ${data.items?.length || 0} 条)</h3>
+                <div class="raw-data">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            if (data.items) {
+                data.items.forEach((reply, index) => {
+                    const snippet = reply.snippet;
+                    html += `
+                        <div class="reply-item">
+                            <h4>回复评论 ${index + 1}</h4>
+                            <p><strong>ID:</strong> ${reply.id}</p>
+                            <p><strong>作者:</strong> ${snippet.authorDisplayName}</p>
+                            <p><strong>内容:</strong> ${snippet.textDisplay || snippet.textOriginal || '无内容'}</p>
+                            <p><strong>点赞数:</strong> ${snippet.likeCount}</p>
+                            <p><strong>发布时间:</strong> ${snippet.publishedAt}</p>
+                            <p><strong>视频ID:</strong> ${snippet.videoId}</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function showMessage(message, type) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

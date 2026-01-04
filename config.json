@@ -1,0 +1,18 @@
+{
+  "api": {
+    "maxVideosPerSearch": 50,
+    "maxCommentsPerVideo": 100,
+    "baseUrl": "https://www.googleapis.com/youtube/v3"
+  },
+  "ui": {
+    "theme": "dark",
+    "language": "zh",
+    "defaultTab": "search"
+  },
+  "features": {
+    "enableComments": true,
+    "enableHistory": true,
+    "enableExport": true,
+    "enableBatchOperations": true
+  }
+}

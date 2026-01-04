@@ -1,0 +1,23 @@
+# 修复版本的Dockerfile - 解决ContainerConfig错误
+FROM nginx:alpine
+
+# 设置工作目录
+WORKDIR /usr/share/nginx/html
+
+# 复制项目文件到容器
+COPY index.html .
+COPY config.json .
+COPY assets ./assets
+COPY test-docker-access.html .
+
+# 复制自定义Nginx配置
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# 创建必要的目录
+RUN mkdir -p /var/log/nginx
+
+# 暴露80端口
+EXPOSE 80
+
+# 启动Nginx
+CMD ["nginx", "-g", "daemon off;"]

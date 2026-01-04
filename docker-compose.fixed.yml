@@ -1,0 +1,21 @@
+services:
+  youtube-video-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.fixed
+    container_name: youtube-video-manager-fixed
+    ports:
+      - "8081:80"
+    volumes:
+      # 日志持久化
+      - ./logs:/var/log/nginx
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

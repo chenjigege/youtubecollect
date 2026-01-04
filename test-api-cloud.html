@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API功能测试 - 云服务器版本</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .api-key-preview {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 API功能测试 - 云服务器版本</h1>
+    
+    <div class="test-section">
+        <h2>📋 测试说明</h2>
+        <p>此页面用于测试云服务器版本的API功能，确保其他人访问时API正常工作。</p>
+        <p><strong>测试时间:</strong> <span id="testTime"></span></p>
+    </div>
+
+    <div class="test-section">
+        <h2>🔑 API密钥状态</h2>
+        <div id="apiKeyStatus" class="status info">正在检查API密钥状态...</div>
+        <div id="apiKeyPreview" class="api-key-preview"></div>
+        <button onclick="testApiKey()">测试API密钥</button>
+        <button onclick="resetToDefault()">重置为默认</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🌐 API连接测试</h2>
+        <div id="connectionStatus" class="status info">正在测试API连接...</div>
+        <button onclick="testConnection()">测试连接</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 API使用统计</h2>
+        <div id="usageStats" class="status info">正在获取使用统计...</div>
+        <button onclick="updateStats()">更新统计</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 YouTube API测试</h2>
+        <div id="youtubeTest" class="status info">准备测试YouTube API...</div>
+        <button onclick="testYouTubeApi()">测试YouTube API</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 测试结果</h2>
+        <div id="testResults"></div>
+        <button onclick="runAllTests()">运行所有测试</button>
+        <button onclick="clearResults()">清除结果</button>
+    </div>
+
+    <!-- 引入云服务器版本的API密钥管理器 -->
+    <script src="assets/js/api-key-manager-cloud.js"></script>
+    
+    <script>
+        // 设置测试时间
+        document.getElementById('testTime').textContent = new Date().toLocaleString();
+
+        // 测试API密钥状态
+        function testApiKey() {
+            const status = window.apiKeyManager.getApiKeyStatus();
+            const statusDiv = document.getElementById('apiKeyStatus');
+            const previewDiv = document.getElementById('apiKeyPreview');
+            
+            if (status.isValid) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ API密钥有效';
+                previewDiv.textContent = `密钥预览: ${status.keyPreview}`;
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '❌ API密钥无效';
+                previewDiv.textContent = '无有效密钥';
+            }
+        }
+
+        // 重置为默认密钥
+        function resetToDefault() {
+            window.apiKeyManager.resetToDefault();
+            testApiKey();
+            addResult('🔄 已重置为默认API密钥');
+        }
+
+        // 测试API连接
+        async function testConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.className = 'status info';
+            statusDiv.textContent = '🔄 正在测试连接...';
+            
+            try {
+                const status = await window.apiKeyManager.checkApiAvailability();
+                if (status.available) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✅ API连接正常';
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ API连接失败: ${status.message}`;
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 连接测试异常: ${error.message}`;
+            }
+        }
+
+        // 更新使用统计
+        function updateStats() {
+            const stats = window.apiKeyManager.getApiUsageStats();
+            const statsDiv = document.getElementById('usageStats');
+            
+            statsDiv.className = 'status info';
+            statsDiv.innerHTML = `
+                <strong>📊 API使用统计:</strong><br>
+                总请求数: ${stats.totalRequests}<br>
+                今日请求: ${stats.dailyRequests}<br>
+                配额使用: ${stats.quotaUsed}/10000<br>
+                最后使用: ${stats.lastUsed ? new Date(stats.lastUsed).toLocaleString() : '从未使用'}
+            `;
+        }
+
+        // 测试YouTube API
+        async function testYouTubeApi() {
+            const testDiv = document.getElementById('youtubeTest');
+            testDiv.className = 'status info';
+            testDiv.textContent = '🔄 正在测试YouTube API...';
+            
+            try {
+                const key = window.apiKeyManager.getCurrentApiKey();
+                const testUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&key=${key}&maxResults=1`;
+                
+                const response = await fetch(testUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    testDiv.className = 'status success';
+                    testDiv.textContent = '✅ YouTube API测试成功';
+                    addResult(`✅ YouTube API测试成功，找到 ${data.items.length} 个结果`);
+                } else {
+                    const errorData = await response.json();
+                    testDiv.className = 'status error';
+                    testDiv.textContent = `❌ YouTube API测试失败: ${errorData.error?.message || '未知错误'}`;
+                    addResult(`❌ YouTube API测试失败: ${errorData.error?.message || '未知错误'}`);
+                }
+            } catch (error) {
+                testDiv.className = 'status error';
+                testDiv.textContent = `❌ YouTube API测试异常: ${error.message}`;
+                addResult(`❌ YouTube API测试异常: ${error.message}`);
+            }
+        }
+
+        // 运行所有测试
+        async function runAllTests() {
+            addResult('🚀 开始运行所有测试...');
+            
+            testApiKey();
+            await testConnection();
+            updateStats();
+            await testYouTubeApi();
+            
+            addResult('✅ 所有测试完成');
+        }
+
+        // 添加测试结果
+        function addResult(message) {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<div class="status info">[${timestamp}] ${message}</div>`;
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+        }
+
+        // 页面加载时自动运行基本测试
+        window.addEventListener('load', () => {
+            testApiKey();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
+
+
+
+

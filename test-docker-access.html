@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker访问测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐳 Docker访问测试页面</h1>
+    
+    <div class="test-section">
+        <h2>📋 测试信息</h2>
+        <div class="info">
+            <strong>测试时间:</strong> <span id="testTime"></span><br>
+            <strong>用户代理:</strong> <span id="userAgent"></span><br>
+            <strong>当前URL:</strong> <span id="currentUrl"></span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 连接测试</h2>
+        <p>点击下面的按钮测试不同的访问方式：</p>
+        
+        <button onclick="testConnection('http://localhost:8081')">测试 localhost:8081</button>
+        <button onclick="testConnection('http://127.0.0.1:8081')">测试 127.0.0.1:8081</button>
+        <button onclick="testConnection('http://localhost:8080')">测试 localhost:8080</button>
+        <button onclick="testConnection('http://127.0.0.1:8080')">测试 127.0.0.1:8080</button>
+        
+        <div id="connectionResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🌐 网络诊断</h2>
+        <button onclick="runNetworkDiagnostics()">运行网络诊断</button>
+        <div id="networkResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📱 浏览器信息</h2>
+        <div id="browserInfo"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💡 解决方案建议</h2>
+        <div class="info">
+            <h3>如果遇到"连接已重置"错误，请尝试：</h3>
+            <ol>
+                <li><strong>清除浏览器缓存</strong> - 按 Ctrl+Shift+Delete (Windows) 或 Cmd+Shift+Delete (Mac)</li>
+                <li><strong>尝试无痕模式</strong> - 按 Ctrl+Shift+N (Windows) 或 Cmd+Shift+N (Mac)</li>
+                <li><strong>检查代理设置</strong> - 确保没有使用代理服务器</li>
+                <li><strong>尝试不同端口</strong> - 使用 127.0.0.1:8081 而不是 localhost:8081</li>
+                <li><strong>重启Docker</strong> - 运行 <code>docker-compose restart</code></li>
+                <li><strong>检查防火墙</strong> - 确保端口8081没有被阻止</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // 显示基本信息
+        document.getElementById('testTime').textContent = new Date().toLocaleString();
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        document.getElementById('currentUrl').textContent = window.location.href;
+
+        // 显示浏览器信息
+        const browserInfo = document.getElementById('browserInfo');
+        browserInfo.innerHTML = `
+            <div class="info">
+                <strong>浏览器:</strong> ${getBrowserName()}<br>
+                <strong>版本:</strong> ${getBrowserVersion()}<br>
+                <strong>平台:</strong> ${navigator.platform}<br>
+                <strong>语言:</strong> ${navigator.language}<br>
+                <strong>在线状态:</strong> ${navigator.onLine ? '在线' : '离线'}<br>
+                <strong>Cookie启用:</strong> ${navigator.cookieEnabled ? '是' : '否'}
+            </div>
+        `;
+
+        function getBrowserName() {
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            return '未知浏览器';
+        }
+
+        function getBrowserVersion() {
+            const userAgent = navigator.userAgent;
+            const match = userAgent.match(/(Chrome|Firefox|Safari|Edge)\/(\d+)/);
+            return match ? match[2] : '未知版本';
+        }
+
+        async function testConnection(url) {
+            const resultsDiv = document.getElementById('connectionResults');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'status info';
+            testDiv.innerHTML = `🔄 正在测试 ${url}...`;
+            resultsDiv.appendChild(testDiv);
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+
+                if (response.ok) {
+                    testDiv.className = 'status success';
+                    testDiv.innerHTML = `✅ ${url} - 连接成功 (${responseTime}ms) - 状态码: ${response.status}`;
+                } else {
+                    testDiv.className = 'status error';
+                    testDiv.innerHTML = `❌ ${url} - 连接失败 - 状态码: ${response.status}`;
+                }
+            } catch (error) {
+                testDiv.className = 'status error';
+                testDiv.innerHTML = `❌ ${url} - 连接错误: ${error.message}`;
+            }
+        }
+
+        async function runNetworkDiagnostics() {
+            const resultsDiv = document.getElementById('networkResults');
+            resultsDiv.innerHTML = '<div class="status info">🔄 正在运行网络诊断...</div>';
+
+            const diagnostics = [];
+
+            // 测试基本连接
+            try {
+                const response = await fetch('http://127.0.0.1:8081', { method: 'HEAD' });
+                diagnostics.push(`✅ 基本连接: 正常 (状态码: ${response.status})`);
+            } catch (error) {
+                diagnostics.push(`❌ 基本连接: 失败 (${error.message})`);
+            }
+
+            // 测试DNS解析
+            try {
+                const response = await fetch('http://localhost:8081', { method: 'HEAD' });
+                diagnostics.push(`✅ DNS解析: 正常`);
+            } catch (error) {
+                diagnostics.push(`❌ DNS解析: 失败 (${error.message})`);
+            }
+
+            // 测试CORS
+            try {
+                const response = await fetch('http://127.0.0.1:8081', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                diagnostics.push(`✅ CORS: 正常`);
+            } catch (error) {
+                diagnostics.push(`❌ CORS: 失败 (${error.message})`);
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="result">${diagnostics.join('\n')}</div>
+                <div class="info">
+                    <strong>诊断完成!</strong> 如果所有测试都通过，但浏览器仍然显示错误，可能是浏览器缓存或代理设置问题。
+                </div>
+            `;
+        }
+
+        // 自动运行基本测试
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testConnection('http://127.0.0.1:8081');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

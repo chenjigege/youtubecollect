@@ -1,0 +1,51 @@
+services:
+  youtube-video-manager:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: youtube-video-manager:v2.1.0
+    container_name: youtube-video-manager
+    ports:
+      - "8081:80"
+      - "8443:443"  # 为HTTPS预留
+    volumes:
+      # 日志持久化
+      - ./logs:/var/log/nginx
+      # 配置文件挂载（可选）
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.youtube-manager.rule=Host(`youtube-manager.yourdomain.com`)"
+      - "traefik.http.services.youtube-manager.loadbalancer.server.port=80"
+
+  # 可选：添加Redis用于缓存（如果需要的话）
+  # redis:
+  #   image: redis:alpine
+  #   container_name: youtube-manager-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+# volumes:
+#   redis-data:
